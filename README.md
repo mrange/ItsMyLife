@@ -121,7 +121,12 @@ let ragnarök () =
 
 ## Evolution
 
-To evolve the game state, we need to go through each cell and count how many of its 8 neighbors are alive. Then, we apply Conway's rules to determine if the cell survives, dies, or is resurrected.
+To evolve the game state, we need to go through each cell and count how many of its 8 neighbors are alive. Then, we apply Conway's rules:
+
+1. Any live cell with fewer than two live neighbors dies, as if by underpopulation.
+2. Any live cell with two or three live neighbors lives on to the next generation.
+3. Any live cell with more than three live neighbors dies, as if by overpopulation.
+4. Any dead cell with exactly three live neighbors becomes a live cell, as if by reproduction.
 
 We put the new state in the `_next` state array to avoid changing `_current` while computing the new state. At the end, we swap the `_current` and `_next` buffers using the classic double-buffering pattern.
 
