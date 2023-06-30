@@ -55,6 +55,8 @@ type App() =
 
 To have something to render I need the game of life state. The state is a grid of cells where each cell is a byte where 0 means dead and 1 to 255 is the age of an alive cell.
 
+Then I override `Control.Render` and through the `DrawingContext` draws alot of rectangles on screen.
+
 ```fsharp
 type ItIsMyLifeControl () =
   class
@@ -104,5 +106,110 @@ type ItIsMyLifeControl () =
       base.Render context
 
   end
+```
 
+## Let's have a fresh start
 
+For the initial state I simply flip a coin for each cell and from the result determines if a cell is alive or dead.
+
+```fsharp
+// Let's have a fresh new start
+let ragnarök () =
+  let rnd = Random.Shared
+  for y = 0 to _height - 1 do
+    let yoff = y*_width
+    for x = 0 to _width - 1 do
+      let isAlive = rnd.NextDouble () > 0.5
+      _current.[x + yoff] <- if isAlive then _infant else _dead
+```
+
+## Evolution
+
+Then to evolve the game state we need to go through each cell and count how many of its 8 neighbours are alive. Then we apply the Conway's rules to determine if the cell survives, dies or is resurrected.
+
+The new state we put in the `_next` state as to not change `_current` while we are computing a new state.
+
+At the end we flip the `_current` and `_next` state in the classic double buffering pattern.
+
+I used 1960s style for loops to iterate through the cells.
+
+```fsharp
+// evolves from one state into the next
+let evolve () =
+  // Iterates through all cells 1960s style
+  for y = 0 to _height - 1 do
+    let yoff = y*_width
+    for x = 0 to _width - 1 do
+      // Counts alive neighbours 1960s style
+      let mutable aliveNeighbours = 0
+      for yy = -1 to 1 do
+        let fy    = (_height + y + yy)%_height
+        let fyoff = fy*_width
+
+        for xx = -1 to 1 do
+          let fx  = (_width + x + xx)%_width
+          let inc = if _current.[fx + fyoff] <> _dead then 1 else 0
+          aliveNeighbours <- aliveNeighbours + inc
+
+      let current = _current.[yoff + x]
+      // If the current cell is alive the alive neighbours is +1
+      //  because the loop above loops over all cells in 3x3 block
+      //  including current
+      let dec = if current <> _dead then 1 else 0
+      aliveNeighbours <- aliveNeighbours - dec
+
+      // If the cell survives increment it's age by 1
+      let aliveAndWell = Math.Min (current, 254uy) + 1uy
+
+      // The Conway rules
+      let next =
+        match aliveNeighbours with
+        | 0 | 1 -> _dead
+        | 2     -> if current = _dead then _dead else aliveAndWell
+        | 3     -> aliveAndWell
+        | _     -> _dead
+      _next.[yoff + x] <- next
+
+  // Swaps current and next buffers, 1960s style
+  let tmp   = _current
+  _current  <- _next
+  _next     <- tmp
+```
+
+## Almost done
+
+Then I created a timer to compute a new state and invalidate the visual to redraw the screen. Once again as a WPF dev this feels very familiar.
+
+```fsharp
+let onTimer s e =
+  evolve ()
+  // We can't reach the base class methods from here
+  //  We could assign the "this" ref a name but that
+  //  has other problems in F#
+  //  Delegate the invalidate request
+  _invalidateVisual ()
+
+let _timer = new DispatcherTimer (
+    TimeSpan.FromSeconds _timeout
+  , DispatcherPriority.SystemIdle
+  , (EventHandler onTimer)
+  )
+```
+
+And finally the `Start` method:
+
+```fsharp
+member x.Start () =
+  ragnarök ()
+  evolve ()
+  // Here we can set up the invalidate visual redirect because
+  // we have access to the "this" ref here.
+  _invalidateVisual <- fun () -> x.InvalidateVisual ()
+  _timer.Start ()
+```
+
+## How did it go?
+
+I think it was a fun little excersise and performance-wise it does decent at 256x256 at 20FPS (around 1%-5% CPU on my machine after a few iterations).
+
+I also think Avalonia is pretty sweet as a former WPF dev.
