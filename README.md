@@ -10,6 +10,8 @@ cd ItsMyLife
 dotnet run -c Release
 ```
 
+## Introduction
+
 Hello! Some time ago, I noticed that Khalid ([@khalidabuhakmeh@mastodon.social](https://dotnet.social/@khalidabuhakmeh@mastodon.social)) was experimenting with Avalonia and Conway's Game of Life on Mastodon. Khalid used the C# MVVM template for Avalonia. Later, brandewinder ([@brandewinder@hachyderm.io](https://dotnet.social/@brandewinder@hachyderm.io)) joined and implemented his version using F# with Elmish. They had an interesting discussion on Mastodon about performance, which inspired me to give it a try as well.
 
 ## My Approach
